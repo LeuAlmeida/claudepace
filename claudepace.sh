@@ -31,39 +31,50 @@ if os.path.exists(config_path):
     except Exception:
         pass
 
-# --- State file: track today's starting % ---
+# --- State file: track today's baseline + persist resets_at ---
 state_path = os.path.expanduser('~/.claudepace-state')
 today = datetime.date.today().isoformat()
-start_pct = used  # fallback: assume started at current
+start_pct = used
+stored_resets_at = ''
 
+state = {}
 if os.path.exists(state_path):
     try:
         with open(state_path) as f:
-            lines = dict(l.strip().split('=', 1) for l in f if '=' in l)
-        if lines.get('date') == today:
-            start_pct = float(lines.get('start_pct', used))
-        else:
-            # New day — reset baseline
-            start_pct = used
-            with open(state_path, 'w') as f:
-                f.write(f'date={today}\nstart_pct={used}\n')
+            state = dict(l.strip().split('=', 1) for l in f if '=' in l)
     except Exception:
         pass
+
+if state.get('date') == today:
+    start_pct = float(state.get('start_pct', used))
+    stored_resets_at = state.get('resets_at', '')
 else:
-    try:
-        with open(state_path, 'w') as f:
-            f.write(f'date={today}\nstart_pct={used}\n')
-    except Exception:
-        pass
+    # New day — reset daily baseline, keep resets_at if still valid
+    stored_resets_at = state.get('resets_at', '')
+    start_pct = used
+    state = {'date': today, 'start_pct': str(used), 'resets_at': stored_resets_at}
+
+# Update resets_at if API gave us a fresh one
+if resets_at_str:
+    state['resets_at'] = resets_at_str
+    stored_resets_at = resets_at_str
+
+try:
+    with open(state_path, 'w') as f:
+        for k, v in state.items():
+            f.write(f'{k}={v}\n')
+except Exception:
+    pass
 
 today_used = max(0.0, used - start_pct)
 today_remaining = max(0.0, daily_cap - today_used)
 
 # --- Days left in week ---
 days_left = 7.0
-if resets_at_str:
+effective_resets_at = resets_at_str or stored_resets_at
+if effective_resets_at:
     try:
-        resets_at = datetime.datetime.fromisoformat(resets_at_str.replace('Z', '+00:00'))
+        resets_at = datetime.datetime.fromisoformat(effective_resets_at.replace('Z', '+00:00'))
         now = datetime.datetime.now(datetime.timezone.utc)
         delta = resets_at - now
         days_left = min(7.0, max(0.5, delta.total_seconds() / 86400))
