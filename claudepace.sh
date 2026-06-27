@@ -100,7 +100,7 @@ print(
     f'{bar} '
     f'{status_color}{BOLD}{used:.0f}%{RESET}{DIM} week{RESET}'
     f'  {DIM}·{RESET}  '
-    f'{budget_color}{daily_budget:.1f}%{RESET}{DIM}/day left{RESET}'
+    f'{DIM}cap{RESET} {budget_color}{daily_budget:.1f}%{RESET}{DIM}/day{RESET}'
     f'  {DIM}·{RESET}  '
     f'{DIM}{time_left}{RESET}'
     f'  {DIM}·{RESET}  '
