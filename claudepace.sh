@@ -122,7 +122,7 @@ print(
     f'{bar} '
     f'{pace_color}{BOLD}{used:.0f}%{RESET}{DIM} week{RESET}'
     f'  {DIM}·{RESET}  '
-    f'{today_color}{BOLD}{today_remaining:.1f}%{RESET}{DIM} left hoje{RESET}'
+    f'{today_color}{BOLD}{today_remaining:.1f}%{RESET}{DIM} left today{RESET}'
     f'  {DIM}({today_used:.1f}% of {daily_cap:.1f}% cap){RESET}'
     f'  {DIM}·{RESET}  '
     f'{DIM}{time_left}{RESET}'
