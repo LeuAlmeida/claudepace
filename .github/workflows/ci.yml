@@ -1,0 +1,26 @@
+name: ci
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: syntax check
+        run: bash -n claudepace.sh
+      - name: smoke test (empty input)
+        run: echo '{}' | bash claudepace.sh
+      - name: smoke test (with rate limits)
+        run: |
+          echo '{
+            "rate_limits": {
+              "seven_day": {
+                "used_percentage": 42.5,
+                "resets_at": "2099-01-07T00:00:00Z"
+              },
+              "five_hour": {
+                "used_percentage": 10.0
+              }
+            }
+          }' | bash claudepace.sh
