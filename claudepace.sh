@@ -150,8 +150,6 @@ print(
     f'  {DIM}·{RESET}  '
     f'{pace_color}{pace_icon} {pace_label}{RESET}'
     f'{burst_str}'
-    f'  {DIM}|{RESET}  '
-    f'{DIM}session{RESET} {DIM}{USD}{session_cost:.2f}{RESET}'
     f'  {DIM}┄{RESET}'
 )
 "
