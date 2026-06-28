@@ -18,6 +18,10 @@ used = float(week.get('used_percentage') or 0)
 resets_at_str = week.get('resets_at', '') or ''
 fiveh_used = float(fiveh.get('used_percentage') or 0)
 
+# --- Session data ---
+session_cost = float((data.get('cost') or {}).get('total_cost_usd') or 0)
+ctx_pct = float((data.get('context_window') or {}).get('used_percentage') or 0)
+
 # --- Config (~/.claudepace) ---
 daily_cap = 100.0 / 7  # default: 14.3%
 config_path = os.path.expanduser('~/.claudepace')
@@ -86,6 +90,8 @@ days_elapsed = 7.0 - days_left
 ideal_used = (days_elapsed / 7.0) * 100.0
 pace_delta = used - ideal_used
 
+USD = chr(36)  # avoid bash $ expansion inside double-quoted heredoc
+
 # --- Colors ---
 RED    = '\033[38;5;203m'
 YELLOW = '\033[38;5;220m'
@@ -112,10 +118,14 @@ elif today_remaining <= daily_cap * 0.4:
 else:
     today_color = GREEN
 
-# --- Weekly bar ---
-BAR_W = 20
+# --- Bars ---
+BAR_W = 16
 filled = min(round(used / 100.0 * BAR_W), BAR_W)
-bar = pace_color + ('█' * filled) + DIM + ('░' * (BAR_W - filled)) + RESET
+bar_week = pace_color + ('█' * filled) + DIM + ('░' * (BAR_W - filled)) + RESET
+
+ctx_color = RED if ctx_pct > 80 else (YELLOW if ctx_pct > 60 else GREEN)
+ctx_filled = min(round(ctx_pct / 100.0 * BAR_W), BAR_W)
+bar_ctx = ctx_color + ('█' * ctx_filled) + DIM + ('░' * (BAR_W - ctx_filled)) + RESET
 
 # --- Time left ---
 d = int(days_left)
@@ -130,8 +140,8 @@ if fiveh_used > 50:
 
 print(
     f'{DIM}┄{RESET} '
-    f'{bar} '
-    f'{pace_color}{BOLD}{used:.0f}%{RESET}{DIM} week{RESET}'
+    f'{DIM}week{RESET} {bar_week} {pace_color}{BOLD}{used:.0f}%{RESET}'
+    f'  {DIM}ctx{RESET} {bar_ctx} {ctx_color}{ctx_pct:.0f}%{RESET}'
     f'  {DIM}·{RESET}  '
     f'{today_color}{BOLD}{today_remaining:.1f}%{RESET}{DIM} left today{RESET}'
     f'  {DIM}({today_used:.1f}% of {daily_cap:.1f}% cap){RESET}'
@@ -140,6 +150,8 @@ print(
     f'  {DIM}·{RESET}  '
     f'{pace_color}{pace_icon} {pace_label}{RESET}'
     f'{burst_str}'
+    f'  {DIM}|{RESET}  '
+    f'{DIM}session{RESET} {DIM}{USD}{session_cost:.2f}{RESET}'
     f'  {DIM}┄{RESET}'
 )
 "
