@@ -10,13 +10,35 @@ try:
 except Exception:
     sys.exit(0)
 
+# Debug mode: CLAUDEPACE_DEBUG=1 logs raw JSON to ~/.claudepace-debug.json
+if os.environ.get('CLAUDEPACE_DEBUG') == '1':
+    try:
+        with open(os.path.expanduser('~/.claudepace-debug.json'), 'w') as f:
+            json.dump(data, f, indent=2)
+    except Exception:
+        pass
+
 rl = data.get('rate_limits', {})
 week = rl.get('seven_day', {})
 fiveh = rl.get('five_hour', {})
 
 used = float(week.get('used_percentage') or 0)
-resets_at_str = week.get('resets_at', '') or ''
 fiveh_used = float(fiveh.get('used_percentage') or 0)
+
+# resets_at can be Unix timestamp (int) or ISO string
+def parse_resets_at(val):
+    if not val:
+        return ''
+    try:
+        if isinstance(val, (int, float)):
+            dt = datetime.datetime.fromtimestamp(val, tz=datetime.timezone.utc)
+        else:
+            dt = datetime.datetime.fromisoformat(str(val).replace('Z', '+00:00'))
+        return dt.isoformat()
+    except Exception:
+        return ''
+
+resets_at_str = parse_resets_at(week.get('resets_at'))
 
 # --- Session data ---
 session_cost = float((data.get('cost') or {}).get('total_cost_usd') or 0)
