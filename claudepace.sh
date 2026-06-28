@@ -140,30 +140,41 @@ elif today_remaining <= daily_cap * 0.4:
 else:
     today_color = GREEN
 
+# --- 5h resets_at ---
+fiveh_resets_at_str = parse_resets_at(fiveh.get('resets_at'))
+fiveh_time_left = ''
+if fiveh_resets_at_str:
+    try:
+        fiveh_resets = datetime.datetime.fromisoformat(fiveh_resets_at_str)
+        now = datetime.datetime.now(datetime.timezone.utc)
+        delta = (fiveh_resets - now).total_seconds()
+        if delta > 0:
+            hh = int(delta // 3600)
+            mm = int((delta % 3600) // 60)
+            fiveh_time_left = f'{hh}h {mm}m'
+    except Exception:
+        pass
+
 # --- Bars ---
 BAR_W = 16
 filled = min(round(used / 100.0 * BAR_W), BAR_W)
 bar_week = pace_color + ('█' * filled) + DIM + ('░' * (BAR_W - filled)) + RESET
 
-ctx_color = RED if ctx_pct > 80 else (YELLOW if ctx_pct > 60 else GREEN)
-ctx_filled = min(round(ctx_pct / 100.0 * BAR_W), BAR_W)
-bar_ctx = ctx_color + ('█' * ctx_filled) + DIM + ('░' * (BAR_W - ctx_filled)) + RESET
+fiveh_color = RED if fiveh_used > 80 else (YELLOW if fiveh_used > 50 else GREEN)
+fiveh_filled = min(round(fiveh_used / 100.0 * BAR_W), BAR_W)
+bar_5h = fiveh_color + ('█' * fiveh_filled) + DIM + ('░' * (BAR_W - fiveh_filled)) + RESET
 
-# --- Time left ---
+# --- Time left (week) ---
 d = int(days_left)
 h = int((days_left - d) * 24)
 time_left = f'{d}d {h}h' if d > 0 else f'{h}h'
 
-# --- 5h burst (only if notable) ---
-burst_str = ''
-if fiveh_used > 50:
-    burst_color = RED if fiveh_used > 80 else YELLOW
-    burst_str = f'  {DIM}|{RESET}  {burst_color}5h {fiveh_used:.0f}%{RESET}'
+fiveh_reset_str = f'  {DIM}resets {fiveh_time_left}{RESET}' if fiveh_time_left else ''
 
 print(
     f'{DIM}┄{RESET} '
     f'{DIM}week{RESET} {bar_week} {pace_color}{BOLD}{used:.0f}%{RESET}'
-    f'  {DIM}ctx{RESET} {bar_ctx} {ctx_color}{ctx_pct:.0f}%{RESET}'
+    f'  {DIM}5h{RESET} {bar_5h} {fiveh_color}{BOLD}{fiveh_used:.0f}%{RESET}{fiveh_reset_str}'
     f'  {DIM}·{RESET}  '
     f'{today_color}{BOLD}{today_remaining:.1f}%{RESET}{DIM} left today{RESET}'
     f'  {DIM}({today_used:.1f}% of {daily_cap:.1f}% cap){RESET}'
@@ -171,7 +182,6 @@ print(
     f'{DIM}{time_left}{RESET}'
     f'  {DIM}·{RESET}  '
     f'{pace_color}{pace_icon} {pace_label}{RESET}'
-    f'{burst_str}'
     f'  {DIM}┄{RESET}'
 )
 "
