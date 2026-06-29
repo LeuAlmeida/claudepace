@@ -85,6 +85,28 @@ if resets_at_str:
     state['resets_at'] = resets_at_str
     stored_resets_at = resets_at_str
 
+# Cache last known non-zero values — shared across all sessions via state file.
+# When a session opens with 0% (no response yet), show cached value with ~ prefix.
+cached_week = float(state.get('last_week_pct', 0))
+cached_5h   = float(state.get('last_5h_pct', 0))
+
+week_stale = fiveh_stale = False
+
+if used == 0 and cached_week > 0:
+    used = cached_week
+    week_stale = True
+    if start_pct == 0:
+        start_pct = float(state.get('start_pct', used))
+
+if fiveh_used == 0 and cached_5h > 0:
+    fiveh_used = cached_5h
+    fiveh_stale = True
+
+if not week_stale and used > 0:
+    state['last_week_pct'] = str(used)
+if not fiveh_stale and fiveh_used > 0:
+    state['last_5h_pct'] = str(fiveh_used)
+
 try:
     with open(state_path, 'w') as f:
         for k, v in state.items():
@@ -171,10 +193,13 @@ time_left = f'{d}d {h}h' if d > 0 else f'{h}h'
 
 fiveh_reset_str = f'  {DIM}resets {fiveh_time_left}{RESET}' if fiveh_time_left else ''
 
+week_pct_str  = f'{DIM}~{RESET}{pace_color}{BOLD}{used:.0f}%{RESET}' if week_stale  else f'{pace_color}{BOLD}{used:.0f}%{RESET}'
+fiveh_pct_str = f'{DIM}~{RESET}{fiveh_color}{BOLD}{fiveh_used:.0f}%{RESET}' if fiveh_stale else f'{fiveh_color}{BOLD}{fiveh_used:.0f}%{RESET}'
+
 print(
     f'{DIM}┄{RESET} '
-    f'{DIM}week{RESET} {bar_week} {pace_color}{BOLD}{used:.0f}%{RESET}'
-    f'  {DIM}5h{RESET} {bar_5h} {fiveh_color}{BOLD}{fiveh_used:.0f}%{RESET}{fiveh_reset_str}'
+    f'{DIM}week{RESET} {bar_week} {week_pct_str}'
+    f'  {DIM}5h{RESET} {bar_5h} {fiveh_pct_str}{fiveh_reset_str}'
     f'  {DIM}·{RESET}  '
     f'{today_color}{BOLD}{today_remaining:.1f}%{RESET}{DIM} left today{RESET}'
     f'  {DIM}({today_used:.1f}% of {daily_cap:.1f}% cap){RESET}'

@@ -2,17 +2,17 @@
 
 Stop burning through your Claude Code tokens by Wednesday.
 
-Adds a live progress bar to your Claude Code status line — shows weekly quota usage, your safe daily budget, and whether you're on track to last the full week.
+Adds a live status line to Claude Code — weekly quota bar, 5-hour session bar, daily budget tracking, and pace signal so you always know if you're on track to last the full week.
 
 ```
-┄ ████████████░░░░░░░░ 58%  week  ·  6.1%/day left  ·  3d 4h  ·  ↑ fast  ┄
+┄ week ████████░░░░░░░░ 48%  5h ████░░░░░░░░░░░░ 22%  ·  9.1% left today  (5.2% of 14.3% cap)  ·  3d 6h  ·  ~ pace  ┄
 ```
 
 ---
 
 ## The problem
 
-Claude Code Max resets weekly. If you don't pace yourself, you hit the limit on Thursday and have nothing left for the actual deadlines that show up Friday.
+Claude Code Max resets weekly. If you don't pace yourself, you hit the limit on Thursday and have nothing left for the deadlines that show up Friday.
 
 ## Install
 
@@ -22,51 +22,68 @@ cd claudepace
 ./install.sh
 ```
 
-Then restart Claude Code. That's it.
+Restart Claude Code. Done.
+
+The installer asks for your daily cap target (default `14.3%` — 100% ÷ 7 days).
 
 ## What it shows
 
 ```
-┄ ████████░░░░░░░░░░░░ 34%  week  ·  12.0%/day left  ·  4d 6h  ·  ~ pace  ┄
+┄ week ████████░░░░░░░░ 48%  5h ████░░░░░░░░░░░░ 22%  resets 1h 12m  ·  9.1% left today  (5.2% of 14.3% cap)  ·  3d 6h  ·  ~ pace  ┄
 ```
 
 | Field | Meaning |
 |-------|---------|
-| `34% week` | How much of your weekly quota you've used |
-| `12.0%/day left` | How much you can safely burn per day to reach Sunday |
-| `4d 6h` | Time until quota resets |
-| `~ pace` | Whether you're on track — `~ pace`, `↑ fast`, `↑↑ over`, or `↓ slow` |
+| `week 48%` | Weekly quota used |
+| `5h 22%` | 5-hour rolling session used (matches `/usage`) |
+| `resets 1h 12m` | Time until 5-hour window resets |
+| `9.1% left today` | Remaining daily budget |
+| `(5.2% of 14.3% cap)` | How much you've used today vs your daily cap |
+| `3d 6h` | Time until weekly quota resets |
+| `~ pace` | Whether you're on track for the week |
 
-The bar turns yellow when you're burning faster than the safe pace, red when you're significantly over.
+Values shown with `~` prefix are cached from the last active session — they update automatically on the next response.
 
-## Pace status
+## Pace signal
 
-claudepace compares your actual usage against the ideal burn rate for the current point in the week:
+Compares actual usage against the ideal burn rate for the current point in the week:
 
-- `~ pace` — you're on track to finish Sunday with quota to spare
-- `↑ fast` — slightly ahead of pace, slow down a bit
-- `↑↑ over` — burning too fast, today's budget is nearly gone
-- `↓ slow` — well under pace, you have headroom to go harder
+| Signal | Meaning |
+|--------|---------|
+| `~ pace` | On track to finish Sunday with quota to spare |
+| `↑ fast` | Slightly ahead of pace |
+| `↑↑ over` | Burning too fast, daily budget nearly gone |
+| `↓ slow` | Well under pace, headroom to go harder |
+
+Bar color follows the same signal — green, yellow, or red.
+
+## Cross-session sync
+
+The state file (`~/.claudepace-state`) is shared across all Claude Code sessions. Any active session keeps it updated — open a new session without sending a message and it will still show your real current usage from the last response in any session.
 
 ## Optional config
 
-Create `~/.claudepace` to override the daily cap target:
-
 ```bash
-echo 'DAILY_CAP=14' > ~/.claudepace
+echo 'DAILY_CAP=14.3' > ~/.claudepace
 ```
 
-Default is `100/7 ≈ 14.3%` — evenly distributed across the week. Set a lower number if you need to preserve quota for specific days.
+Default is `100/7 ≈ 14.3%`. Lower it to preserve quota for specific days.
+
+## Debug mode
+
+```bash
+CLAUDEPACE_DEBUG=1 claude
+```
+
+Dumps the raw JSON context to `~/.claudepace-debug.json` on each response.
 
 ## How it works
 
-Claude Code passes usage data to a configurable status line script after each response. claudepace reads the 7-day rate limit percentage and reset timestamp, then calculates expected vs actual burn to give you a real-time pace signal.
+Claude Code passes usage data to a configurable status line script after each response. claudepace reads the 7-day and 5-hour rate limit fields, calculates pace against a daily baseline, and persists state for cross-session accuracy.
 
-No API calls. No background process. Just a shell script that runs locally in under 50ms.
+No background process. No API calls. Runs locally in under 50ms.
 
 ## Manual setup
-
-If you'd rather wire it up yourself, add this to `~/.claude/settings.json`:
 
 ```json
 {
@@ -76,17 +93,18 @@ If you'd rather wire it up yourself, add this to `~/.claude/settings.json`:
 }
 ```
 
+Or combine with another status line script by calling claudepace as a final line from your existing script:
+
+```bash
+echo "$INPUT" | bash "$HOME/.claude/scripts/claudepace.sh"
+```
+
 ## Uninstall
 
 ```bash
-# Remove the script
 rm ~/.claude/scripts/claudepace.sh
-
-# Remove the config file (if you created one)
-rm -f ~/.claudepace
-
-# Remove from ~/.claude/settings.json
-# Delete the "statusLine" key, or set it back to your previous command
+rm -f ~/.claudepace ~/.claudepace-state
+# Remove "statusLine" key from ~/.claude/settings.json
 ```
 
 ---
