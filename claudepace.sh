@@ -129,9 +129,22 @@ if effective_resets_at:
     except Exception:
         pass
 
-# --- Pace (is weekly on track?) ---
-days_elapsed = 7.0 - days_left
-ideal_used = (days_elapsed / 7.0) * 100.0
+# --- Pace: calendar-day based (intuitive: Sat=day1, Sun=day2, Mon=day3) ---
+current_day = 1
+days_elapsed_calendar = 0
+effective_resets_at_for_pace = resets_at_str or stored_resets_at
+if effective_resets_at_for_pace:
+    try:
+        resets_at_dt = datetime.datetime.fromisoformat(effective_resets_at_for_pace.replace('Z', '+00:00'))
+        reset_start_date = (resets_at_dt - datetime.timedelta(days=7)).date()
+        today_date = datetime.date.today()
+        days_elapsed_calendar = max(0, (today_date - reset_start_date).days)
+        current_day = days_elapsed_calendar + 1
+    except Exception:
+        days_elapsed_calendar = int(7.0 - days_left)
+        current_day = days_elapsed_calendar + 1
+
+ideal_used = (days_elapsed_calendar / 7.0) * 100.0
 pace_delta = used - ideal_used
 
 USD = chr(36)  # avoid bash $ expansion inside double-quoted heredoc
@@ -196,6 +209,8 @@ fiveh_reset_str = f'  {DIM}resets {fiveh_time_left}{RESET}' if fiveh_time_left e
 week_pct_str  = f'{DIM}~{RESET}{pace_color}{BOLD}{used:.0f}%{RESET}' if week_stale  else f'{pace_color}{BOLD}{used:.0f}%{RESET}'
 fiveh_pct_str = f'{DIM}~{RESET}{fiveh_color}{BOLD}{fiveh_used:.0f}%{RESET}' if fiveh_stale else f'{fiveh_color}{BOLD}{fiveh_used:.0f}%{RESET}'
 
+pace_delta_str = f'{pace_delta:+.0f}%'
+
 print(
     f'{DIM}┄{RESET} '
     f'{DIM}week{RESET} {bar_week} {week_pct_str}'
@@ -204,9 +219,9 @@ print(
     f'{today_color}{BOLD}{today_remaining:.1f}%{RESET}{DIM} left today{RESET}'
     f'  {DIM}({today_used:.1f}% of {daily_cap:.1f}% cap){RESET}'
     f'  {DIM}·{RESET}  '
-    f'{DIM}{time_left}{RESET}'
+    f'{DIM}day {current_day}/7  {time_left}{RESET}'
     f'  {DIM}·{RESET}  '
-    f'{pace_color}{pace_icon} {pace_label}{RESET}'
+    f'{pace_color}{pace_icon} {pace_label} {DIM}({pace_delta_str}){RESET}'
     f'  {DIM}┄{RESET}'
 )
 "
