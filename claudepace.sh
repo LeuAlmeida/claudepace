@@ -106,6 +106,9 @@ if not week_stale and used > 0:
     state['last_week_pct'] = str(used)
 if not fiveh_stale and fiveh_used > 0:
     state['last_5h_pct'] = str(fiveh_used)
+fiveh_resets_at_str_local = parse_resets_at(fiveh.get('resets_at'))
+if fiveh_resets_at_str_local:
+    state['last_5h_resets_at'] = fiveh_resets_at_str_local
 
 try:
     with open(state_path, 'w') as f:
