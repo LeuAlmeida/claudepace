@@ -114,9 +114,6 @@ try:
 except Exception:
     pass
 
-today_used = max(0.0, used - start_pct)
-today_remaining = max(0.0, daily_cap - today_used)
-
 # --- Days left in week ---
 days_left = 7.0
 effective_resets_at = resets_at_str or stored_resets_at
@@ -129,16 +126,14 @@ if effective_resets_at:
     except Exception:
         pass
 
-# --- Pace: calendar-day based (intuitive: Sat=day1, Sun=day2, Mon=day3) ---
+# --- Calendar-day pace (Sat=day1, Sun=day2, Mon=day3) ---
 current_day = 1
 days_elapsed_calendar = 0
-effective_resets_at_for_pace = resets_at_str or stored_resets_at
-if effective_resets_at_for_pace:
+if effective_resets_at:
     try:
-        resets_at_dt = datetime.datetime.fromisoformat(effective_resets_at_for_pace.replace('Z', '+00:00'))
+        resets_at_dt = datetime.datetime.fromisoformat(effective_resets_at.replace('Z', '+00:00'))
         reset_start_date = (resets_at_dt - datetime.timedelta(days=7)).date()
-        today_date = datetime.date.today()
-        days_elapsed_calendar = max(0, (today_date - reset_start_date).days)
+        days_elapsed_calendar = max(0, (datetime.date.today() - reset_start_date).days)
         current_day = days_elapsed_calendar + 1
     except Exception:
         days_elapsed_calendar = int(7.0 - days_left)
@@ -146,6 +141,13 @@ if effective_resets_at_for_pace:
 
 ideal_used = (days_elapsed_calendar / 7.0) * 100.0
 pace_delta = used - ideal_used
+
+# --- Today's budget: distribute remaining quota across remaining days ---
+today_used = max(0.0, used - start_pct)
+days_remaining = max(1, 7 - days_elapsed_calendar)  # includes today
+smart_daily_budget = (100.0 - used) / days_remaining
+effective_daily_budget = min(smart_daily_budget, daily_cap)  # never exceed configured cap
+today_remaining = max(0.0, effective_daily_budget - today_used)
 
 USD = chr(36)  # avoid bash $ expansion inside double-quoted heredoc
 
@@ -217,7 +219,7 @@ print(
     f'  {DIM}5h{RESET} {bar_5h} {fiveh_pct_str}{fiveh_reset_str}'
     f'  {DIM}·{RESET}  '
     f'{today_color}{BOLD}{today_remaining:.1f}%{RESET}{DIM} left today{RESET}'
-    f'  {DIM}({today_used:.1f}% of {daily_cap:.1f}% cap){RESET}'
+    f'  {DIM}({today_used:.1f}% used · {effective_daily_budget:.1f}% budget){RESET}'
     f'  {DIM}·{RESET}  '
     f'{DIM}day {current_day}/7  {time_left}{RESET}'
     f'  {DIM}·{RESET}  '
